@@ -552,8 +552,9 @@ function viewPeople() {
       <datalist id="glist">${[...state.groupColor.keys()].map(g => `<option value="${esc(g)}">`).join("")}</datalist>
       <button class="primary" type="submit">Add to map</button></form>
     <div class="card stack"><h3>Groups</h3>
-      <p class="small muted">To add a group, type it in anyone's group box below. Rename or remove a group here and it changes for everyone.</p>
-      <div class="list">${[...state.groupColor.entries()].map(([g, col]) => { const n = state.people.filter(p => (p.groups || []).includes(g)).length; return `<div class="item"><span class="dot" style="background:${col}"></span><input data-grp="${esc(g)}" value="${esc(g)}" maxlength="30" aria-label="Group name" style="flex:1;padding:7px 10px"><span class="small muted">${n}</span><button class="link small" data-grpdel="${esc(g)}" style="color:var(--bad)">Remove</button></div>`; }).join("") || `<p class="small muted">No groups yet.</p>`}</div></div>
+      <p class="small muted">Tap <b>People</b> to tick who's in a group. Rename or remove a group here and it changes for everyone.</p>
+      <form class="row" id="newgrp"><input id="newgrpname" maxlength="30" placeholder="New group, e.g. Gym" style="flex:1"><button class="small sun" type="submit">Add</button></form>
+      <div class="list">${[...state.groupColor.entries()].map(([g, col]) => { const n = state.people.filter(p => (p.groups || []).includes(g)).length; return `<div class="item"><span class="dot" style="background:${col}"></span><input data-grp="${esc(g)}" value="${esc(g)}" maxlength="30" aria-label="Group name" style="flex:1;padding:7px 10px"><button class="small" data-grpppl="${esc(g)}">People (${n})</button><button class="link small" data-grpdel="${esc(g)}" style="color:var(--bad)">Remove</button></div>`; }).join("") || `<p class="small muted">No groups yet.</p>`}</div></div>
     <div class="card"><div class="list">${ppl.map(p => `<div class="item" style="flex-wrap:wrap">
       <span class="dot" style="background:${colorOf(p)}"></span>
       <div class="grow"><input class="name" data-name="${p.id}" value="${esc(p.name)}" maxlength="60" aria-label="Name" style="font-weight:600;padding:6px 10px">
@@ -600,6 +601,13 @@ function viewPeople() {
     if (!to) { inp.value = inp.dataset.grp; return toast("Use Remove to delete a group"); }
     if (to !== inp.dataset.grp) regroup(inp.dataset.grp, to);
   });
+  $("#newgrp").onsubmit = e => {
+    e.preventDefault();
+    const g = $("#newgrpname").value.trim().slice(0, 30);
+    if (!g) return toast("Type a group name first");
+    pickGroupMembers(g);
+  };
+  $("#view").querySelectorAll("[data-grpppl]").forEach(b => b.onclick = () => pickGroupMembers(b.dataset.grpppl));
   $("#view").querySelectorAll("[data-grpdel]").forEach(b => b.onclick = () => {
     if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Tap again"; return; }
     regroup(b.dataset.grpdel, null);
@@ -611,6 +619,28 @@ function viewPeople() {
     const { error } = await sb.from("kilala_people").delete().eq("id", b.dataset.del);
     if (error) return toast(error.message); await refresh();
   });
+}
+// tick everyone who belongs in a group, all at once
+function pickGroupMembers(g) {
+  const ppl = [...state.people].sort((a, b) => a.name.localeCompare(b.name));
+  const s = sheet(`<div class="stack"><h2>Who's in ${esc(g)}?</h2>
+    <p class="small muted">People can be in more than one group.</p>
+    <input id="gq" placeholder="Search">
+    <div class="list" id="gl">${ppl.map(p => `<label class="check" data-n="${esc(p.name.toLowerCase())}"><input type="checkbox" value="${p.id}" ${(p.groups || []).includes(g) ? "checked" : ""}><span class="name grow">${esc(p.name)}</span><span class="small muted">${esc((p.groups || []).filter(x => x !== g).join(", "))}</span></label>`).join("")}</div>
+    <button class="primary" id="gsave">Save</button></div>`);
+  $("#gq", s).oninput = e => { const v = e.target.value.toLowerCase(); s.querySelectorAll("#gl .check").forEach(r => r.style.display = r.dataset.n.includes(v) ? "" : "none"); };
+  $("#gsave", s).onclick = async () => {
+    const btn = $("#gsave", s); btn.disabled = true; btn.textContent = "Saving…";
+    const want = new Set([...s.querySelectorAll("#gl input:checked")].map(i => i.value));
+    for (const p of ppl) {
+      const has = (p.groups || []).includes(g);
+      if (has === want.has(p.id)) continue;
+      const groups = want.has(p.id) ? [...(p.groups || []), g] : p.groups.filter(x => x !== g);
+      const { error } = await sb.from("kilala_people").update({ groups }).eq("id", p.id);
+      if (error) { btn.disabled = false; btn.textContent = "Save"; return toast(error.message); }
+    }
+    s.remove(); toast(`${g}: ${want.size} ${want.size === 1 ? "person" : "people"}`); await refresh();
+  };
 }
 async function shareInvite(id) {
   const p = state.byId.get(id);
