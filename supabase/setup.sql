@@ -161,6 +161,7 @@ create or replace function public.kilala_set_link(
 language plpgsql security definer set search_path = '' as $$
 declare
   me uuid := public.kilala_me();
+  am_admin boolean := public.kilala_is_admin();
   x uuid; y uuid;
 begin
   if me is null then raise exception 'not a member'; end if;
@@ -172,6 +173,7 @@ begin
   update public.kilala_links set
     a_ok = case when a = me then p_knows else a_ok end,
     b_ok = case when b = me then p_knows else b_ok end,
+    admin_ok = case when am_admin then p_knows else admin_ok end,  -- Dean's own answer also vouches for the other side
     how_met = coalesce(nullif(trim(p_how_met), ''), how_met),
     introduced_by = coalesce(p_introduced_by, introduced_by)
   where a = x and b = y;
