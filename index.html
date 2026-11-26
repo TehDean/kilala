@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kilala</title>
+<meta name="theme-color" content="#1f1b16">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='20' cy='22' r='9' fill='%23f2b544'/><circle cx='44' cy='20' r='7' fill='%23e07a5f'/><circle cx='32' cy='44' r='10' fill='%2381b29a'/><path d='M20 22L44 20L32 44Z' fill='none' stroke='%231f1b16' stroke-width='3'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#faf6ef; --card:#fffdf9; --ink:#1f1b16; --muted:#6f665b; --line:#e8dfd1;
+  --sun:#f2b544; --sun-ink:#7a5200; --coral:#e07a5f; --sage:#81b29a; --ok:#2f7a55; --bad:#b4442c;
+  --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:700;margin:0;letter-spacing:-.01em}
+h1{font-size:28px} h2{font-size:20px} h3{font-size:16px}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:13px}
+main{max-width:720px;margin:0 auto;padding:16px 16px 110px}
+header.top{display:flex;align-items:center;justify-content:space-between;max-width:720px;margin:0 auto;padding:16px 16px 4px}
+.brand{display:flex;align-items:center;gap:10px;font-family:Fraunces,serif;font-weight:700;font-size:22px}
+.brand svg{width:30px;height:30px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;align-items:center;gap:10px}
+.spread{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+button,.btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 16px;cursor:pointer;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+button:disabled{opacity:.5;cursor:default}
+button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.sun{background:var(--sun);border-color:var(--sun);color:var(--ink)}
+button.small{padding:6px 12px;font-size:13px}
+button.link{border:0;background:none;padding:0;color:var(--ink);text-decoration:underline;font-weight:500}
+button.yes.on{background:var(--ok);border-color:var(--ok);color:#fff}
+button.no.on{background:var(--bad);border-color:var(--bad);color:#fff}
+input,select,textarea{font:inherit;width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}
+textarea{min-height:120px;resize:vertical}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:500;font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.stat b{display:block;font-family:Fraunces,serif;font-size:26px;line-height:1.1}
+.stat span{font-size:12px;color:var(--muted)}
+#graph{width:100%;height:62vh;min-height:360px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);touch-action:none;display:block}
+#graph text{font:11px Inter,sans-serif;fill:var(--ink);pointer-events:none;paint-order:stroke;stroke:var(--card);stroke-width:3px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:#f1e9dc;font-size:12px;font-weight:500}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(255,253,249,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:20}
+nav.tabs a{flex:1;max-width:120px;text-align:center;color:var(--muted);text-decoration:none;font-size:12px;font-weight:500;padding:6px 4px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs a svg{width:22px;height:22px}
+nav.tabs a.on{color:var(--ink);background:#f6edde}
+.seg{display:flex;background:#f1e9dc;border-radius:999px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:none;padding:8px 6px;font-size:13px}
+.seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.list{display:flex;flex-direction:column}
+.item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .grow{flex:1;min-width:0}
+.item .name{font-weight:600}
+.rank{width:28px;font-family:Fraunces,serif;font-weight:700;font-size:18px;color:var(--muted);text-align:center}
+.rank.r1{color:#c98a00}
+.score{font-family:Fraunces,serif;font-weight:700;font-size:20px}
+.me-row{background:#fff6e3;border-radius:12px;padding-left:8px;padding-right:8px}
+.sheet-bg{position:fixed;inset:0;background:rgba(31,27,22,.35);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:720px;max-height:86vh;overflow:auto;border-radius:22px 22px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom))}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:60;max-width:90vw}
+.center{min-height:80vh;display:flex;align-items:center;justify-content:center}
+.auth{max-width:380px;width:100%}
+.pill{font-size:12px;padding:2px 9px;border-radius:999px;background:#eee6d8;color:var(--muted);font-weight:500;white-space:nowrap}
+.pill.ok{background:#dcefe4;color:var(--ok)}
+.check{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.check input{width:22px;height:22px;flex:none;accent-color:var(--ok)}
+.check.done .name{text-decoration:line-through;color:var(--muted)}
+.empty{text-align:center;padding:28px 10px;color:var(--muted)}
+.gbtn{width:100%;background:#fff;border:1px solid var(--line)}
+hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+</style>
+</head>
+<body>
+<div id="app"><div class="center"><p class="muted">Loading…</p></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+// ---------- settings ----------
+const SUPABASE_URL = "https://qsztbfixleqhxovkfaeg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_IfxPpo_h0HNGY5_maQyqlA_cdDjiWFE";
+const GOOGLE_SIGNIN = false; // turn on once Google sign-in is enabled in Supabase
+const SITE_URL = location.origin + location.pathname;
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { flowType: "implicit", detectSessionInUrl: true, persistSession: true } });
+
+// ---------- tiny helpers ----------
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const app = $("#app");
+const key = (a, b) => a < b ? a + "|" + b : b + "|" + a;
+const firstName = n => String(n).trim().split(/\s+/)[0];
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2600); }
+const PALETTE = ["#e07a5f", "#3d7ea6", "#81b29a", "#f2b544", "#9b6fb0", "#d9668f", "#5b8c5a", "#c4873b", "#4f6d7a", "#a3a847"];
+const NOGROUP = "#b9ae9f";
+
+const state = { session: null, me: null, people: [], links: [], tab: "map", rankTab: "month", events: [] };
+
+// ---------- invite link handling ----------
+(function grabInvite() {
+  const u = new URL(location.href);
+  const t = u.searchParams.get("invite");
+  if (t) { try { localStorage.setItem("kilala_invite", t); } catch {} }
+})();
+function pendingInvite() {
+  const u = new URL(location.href);
+  try { return u.searchParams.get("invite") || localStorage.getItem("kilala_invite"); } catch { return u.searchParams.get("invite"); }
+}
+function clearInvite() {
+  try { localStorage.removeItem("kilala_invite"); } catch {}
+  const u = new URL(location.href); u.searchParams.delete("invite");
+  history.replaceState(null, "", u.pathname + u.search + (location.hash.includes("access_token") ? "" : location.hash));
+}
+
+// ---------- data ----------
+async function loadAll() {
+  const [p, l] = await Promise.all([
+    sb.from("kilala_people").select("id,name,groups,user_id,is_admin,joined_at,created_at").order("name"),
+    sb.from("kilala_links").select("*")
+  ]);
+  if (p.error) throw p.error; if (l.error) throw l.error;
+  state.people = p.data; state.links = l.data;
+  derive();
+}
+function derive() {
+  const byId = new Map(state.people.map(p => [p.id, p]));
+  state.byId = byId;
+  state.linkMap = new Map(state.links.map(l => [key(l.a, l.b), l]));
+  state.adj = new Map(state.people.map(p => [p.id, new Set()]));
+  for (const l of state.links) if (l.counted && byId.has(l.a) && byId.has(l.b)) { state.adj.get(l.a).add(l.b); state.adj.get(l.b).add(l.a); }
+  const groups = [...new Set(state.people.flatMap(p => p.groups || []))].sort((a, b) => a.localeCompare(b));
+  state.groupColor = new Map(groups.map((g, i) => [g, PALETTE[i % PALETTE.length]]));
+  state.me = state.people.find(p => p.user_id === state.session?.user?.id) || null;
+}
+const counted = () => state.links.filter(l => l.counted && state.byId.has(l.a) && state.byId.has(l.b));
+const colorOf = p => (p.groups && p.groups.length) ? state.groupColor.get(p.groups[0]) : NOGROUP;
+const sharesGroup = (p, q) => (p.groups || []).some(g => (q.groups || []).includes(g));
+const isBridge = (p, q) => p.groups?.length && q.groups?.length && !sharesGroup(p, q);
+function myAnswer(otherId) {
+  const l = state.linkMap.get(key(state.me.id, otherId));
+  if (!l) return null;
+  return l.a === state.me.id ? l.a_ok : l.b_ok;
+}
+
+// ---------- boot ----------
+let bootedFor;
+sb.auth.onAuthStateChange((event, session) => {
+  const uid = session?.user?.id || "none";
+  if (uid === bootedFor) return;
+  bootedFor = uid;
+  setTimeout(boot, 0); // run outside the auth callback
+});
+async function boot() {
+  const { data } = await sb.auth.getSession();
+  state.session = data.session;
+  if (!state.session) return renderSignIn();
+  const inv = pendingInvite();
+  if (inv) {
+    const { error } = await sb.rpc("kilala_claim", { p_token: inv });
+    clearInvite();
+    if (error && !/already/.test(error.message)) toast("That invite link didn't work. Ask Dean for a new one.");
+  }
+  try { await loadAll(); } catch (e) { return renderError(e); }
+  if (!state.me) return renderNoInvite();
+  if (location.hash.includes("access_token")) history.replaceState(null, "", location.pathname);
+  const t = location.hash.replace("#", "");
+  if (["map", "you", "ranks", "events", "people"].includes(t)) state.tab = t;
+  if (!state.me.is_admin && ["events", "people"].includes(state.tab)) state.tab = "map";
+  render();
+}
+window.addEventListener("hashchange", () => {
+  const t = location.hash.replace("#", "");
+  if (state.me && ["map", "you", "ranks", "events", "people"].includes(t)) { state.tab = t; render(); }
+});
+
+// ---------- screens: sign in ----------
+const LOGO = `<svg viewBox="0 0 64 64"><path d="M20 22L44 20L32 44Z" fill="none" stroke="#1f1b16" stroke-width="3"/><circle cx="20" cy="22" r="9" fill="#f2b544"/><circle cx="44" cy="20" r="7" fill="#e07a5f"/><circle cx="32" cy="44" r="10" fill="#81b29a"/></svg>`;
+function renderSignIn(msg = "") {
+  const invited = !!pendingInvite();
+  app.innerHTML = `<div class="center"><div class="auth stack">
+    <div class="brand">${LOGO} Kilala</div>
+    <h1>${invited ? "You're invited." : "Welcome back."}</h1>
+    <p class="muted">${invited ? "Dean's mapping who knows who in the friend group, so he can make better intros. Sign in once and you're on the map." : "Sign in to see the map. New here? You'll need a personal invite link from Dean."}</p>
+    <div class="card stack">
+      ${GOOGLE_SIGNIN ? `<button class="gbtn" id="google"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg> Continue with Google</button>
+      <div class="row muted small"><hr style="flex:1">or<hr style="flex:1"></div>` : ""}
+      <form id="emailForm" class="stack">
+        <label class="f">Email<input type="email" id="email" placeholder="you@yahoo.com" autocomplete="email" required></label>
+        <button class="primary" type="submit">Email me a sign-in link</button>
+      </form>
+      ${msg ? `<p class="small" style="color:var(--ok)">${msg}</p>` : `<p class="small muted">No password. Any email works.</p>`}
+    </div></div></div>`;
+  const redirect = SITE_URL + (pendingInvite() ? "?invite=" + encodeURIComponent(pendingInvite()) : "");
+  if (GOOGLE_SIGNIN) $("#google").onclick = () => sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirect } });
+  $("#emailForm").onsubmit = async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector("button"); btn.disabled = true; btn.textContent = "Sending…";
+    const email = $("#email").value.trim();
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirect } });
+    if (error) { btn.disabled = false; btn.textContent = "Email me a sign-in link"; return toast(/rate/i.test(error.message) ? "Too many emails sent just now. Try again in a bit." : error.message); }
+    renderSignIn(`Check ${esc(email)} for a link from Kilala. Tap it on this phone and you're in.`);
+  };
+}
+function renderNoInvite() {
+  app.innerHTML = `<div class="center"><div class="auth stack">
+    <div class="brand">${LOGO} Kilala</div>
+    <h1>Almost there.</h1>
+    <p class="muted">You're signed in, but this account isn't on the map yet. Open the personal invite link Dean sent you, on this phone, and it'll connect.</p>
+    <button id="out">Sign out</button></div></div>`;
+  $("#out").onclick = () => sb.auth.signOut();
+}
+function renderError(e) {
+  app.innerHTML = `<div class="center"><div class="auth stack"><h2>Something went wrong</h2><p class="muted small">${esc(e.message || e)}</p><button onclick="location.reload()">Try again</button></div></div>`;
+}
+
+// ---------- shell ----------
+const ICONS = {
+  map: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 8l8-1.5M7.5 9l3.5 7M17 8.5l-3.5 7.5"/></svg>`,
+  you: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>`,
+  ranks: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5"/></svg>`,
+  events: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14l2.5 2.5L16 12"/></svg>`,
+  people: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5M17 4.5a3.5 3.5 0 010 7M19 15c1.5.6 2.5 2.3 3 5"/></svg>`
+};
+function render() {
+  const tabs = [["map", "Map"], ["you", "You"], ["ranks", "Ranks"]];
+  if (state.me.is_admin) tabs.push(["events", "Events"], ["people", "People"]);
+  app.innerHTML = `<header class="top"><div class="brand">${LOGO} Kilala</div><button class="small" id="signout">Sign out</button></header>
+    <main id="view"></main>
+    <nav class="tabs">${tabs.map(([k, l]) => `<a href="#${k}" class="${state.tab === k ? "on" : ""}">${ICONS[k]}${l}</a>`).join("")}</nav>`;
+  $("#signout").onclick = () => sb.auth.signOut();
+  ({ map: viewMap, you: viewYou, ranks: viewRanks, events: viewEvents, people: viewPeople })[state.tab]();
+}
+async function refresh() { await loadAll(); render(); }
+
+// ---------- MAP ----------
+function viewMap() {
+  const n = state.people.length, c = counted().length, possible = n * (n - 1) / 2;
+  const mix = possible ? Math.round(100 * c / possible) : 0;
+  const groups = [...state.groupColor.entries()];
+  const unanswered = state.people.filter(p => p.id !== state.me.id && myAnswer(p.id) === null && state.linkMap.get(key(p.id, state.me.id))?.admin_ok).length;
+  $("#view").innerHTML = `<div class="stack">
+    ${unanswered && !state.me.is_admin ? `<a href="#you" class="card spread" style="text-decoration:none;color:inherit;background:#fff6e3;border-color:#f3dca6"><span><b>${unanswered} ${unanswered === 1 ? "person" : "people"}</b> Dean thinks you know. Is he right?</span><span>→</span></a>` : ""}
+    <div class="stats">
+      <div class="stat"><b>${n}</b><span>friends on the map</span></div>
+      <div class="stat"><b>${c}</b><span>connections</span></div>
+      <div class="stat"><b>${mix}%</b><span>mixed: pairs who know each other</span></div>
+    </div>
+    ${n < 2 ? `<div class="card empty">${state.me.is_admin ? `Add your friends on the <a href="#people">People</a> tab to start the map.` : "The map is just getting started."}</div>` : `<svg id="graph"></svg>`}
+    ${groups.length ? `<div class="legend">${groups.map(([g, col]) => `<span class="chip"><span class="dot" style="background:${col}"></span>${esc(g)}</span>`).join("")}<span class="chip"><span class="dot" style="background:${NOGROUP}"></span>no group yet</span></div>` : ""}
+    <p class="small muted">Tap anyone to see who they know. Pinch or drag to move around.</p>
+  </div>`;
+  if (n >= 2) drawGraph();
+}
+function drawGraph() {
+  const svg = d3.select("#graph");
+  const el = svg.node(); const W = el.clientWidth, H = el.clientHeight;
+  svg.attr("viewBox", [0, 0, W, H]);
+  const nodes = state.people.map(p => ({ id: p.id, p, deg: state.adj.get(p.id).size }));
+  const links = counted().map(l => ({ source: l.a, target: l.b, bridge: isBridge(state.byId.get(l.a), state.byId.get(l.b)) }));
+  const g = svg.append("g");
+  svg.call(d3.zoom().scaleExtent([.3, 4]).on("zoom", ev => g.attr("transform", ev.transform)));
+  const link = g.append("g").selectAll("line").data(links).join("line")
+    .attr("stroke", d => d.bridge ? "#c98a00" : "#cfc4b3").attr("stroke-width", d => d.bridge ? 2 : 1.3).attr("stroke-opacity", .9);
+  const node = g.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer");
+  node.append("circle").attr("r", d => 7 + Math.sqrt(d.deg) * 2.6).attr("fill", d => colorOf(d.p))
+    .attr("stroke", d => d.id === state.me.id ? "#1f1b16" : "#fff").attr("stroke-width", d => d.id === state.me.id ? 3 : 1.5)
+    .attr("opacity", d => d.p.user_id ? 1 : .75);
+  node.append("text").text(d => d.id === state.me.id ? "You" : firstName(d.p.name)).attr("x", d => 10 + Math.sqrt(d.deg) * 2.6).attr("y", 4);
+  node.on("click", (ev, d) => { ev.stopPropagation(); openPerson(d.id); });
+  const sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d => d.id).distance(70).strength(.5))
+    .force("charge", d3.forceManyBody().strength(-170))
+    .force("center", d3.forceCenter(W / 2, H / 2))
+    .force("x", d3.forceX(W / 2).strength(.06)).force("y", d3.forceY(H / 2).strength(.08))
+    .force("collide", d3.forceCollide(d => 16 + Math.sqrt(d.deg) * 2.6));
+  node.call(d3.drag()
+    .on("start", (ev, d) => { if (!ev.active) sim.alphaTarget(.3).restart(); d.fx = d.x; d.fy = d.y; })
+    .on("drag", (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+    .on("end", (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+  sim.on("tick", () => {
+    link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+    node.attr("transform", d => `translate(${d.x},${d.y})`);
+  });
+}
+
+// ---------- person sheet ----------
+function sheet(html) {
+  const bg = document.createElement("div"); bg.className = "sheet-bg";
+  bg.innerHTML = `<div class="sheet">${html}</div>`;
+  bg.onclick = e => { if (e.target === bg) bg.remove(); };
+  document.body.appendChild(bg);
+  return bg;
+}
+function groupChips(p) { return (p.groups || []).map(g => `<span class="chip"><span class="dot" style="background:${state.groupColor.get(g)}"></span>${esc(g)}</span>`).join(" "); }
+function openPerson(id) {
+  const p = state.byId.get(id); if (!p) return;
+  const friends = [...state.adj.get(id)].map(i => state.byId.get(i)).sort((a, b) => a.name.localeCompare(b.name));
+  const isMe = id === state.me.id;
+  const ans = isMe ? null : myAnswer(id);
+  const s = sheet(`<div class="stack">
+    <div class="spread"><div><h2>${esc(isMe ? p.name + " (you)" : p.name)}</h2><div class="row" style="margin-top:6px;flex-wrap:wrap">${groupChips(p) || `<span class="small muted">No groups yet</span>`}</div></div>
+      <span class="pill ${p.user_id ? "ok" : ""}">${p.user_id ? "Joined" : "Not joined yet"}</span></div>
+    ${isMe ? "" : `<div class="card spread"><span>Do you know ${esc(firstName(p.name))}?</span><span class="row">
+      <button class="small yes ${ans === true ? "on" : ""}" data-k="1">Yes</button><button class="small no ${ans === false ? "on" : ""}" data-k="0">No</button></span></div>`}
+    <h3>Knows ${friends.length} ${friends.length === 1 ? "person" : "people"}</h3>
+    <div class="list">${friends.map(f => {
+      const l = state.linkMap.get(key(id, f.id)); const intro = l?.introduced_by && state.byId.get(l.introduced_by);
+      return `<div class="item"><span class="dot" style="background:${colorOf(f)}"></span><div class="grow"><div class="name">${esc(f.name)}</div>
+        ${(l?.how_met || intro) ? `<div class="small muted">${intro ? "Introduced by " + esc(firstName(intro.name)) : ""}${intro && l.how_met ? " · " : ""}${esc(l.how_met || "")}</div>` : ""}</div>
+        ${isBridge(p, f) ? `<span class="pill" style="background:#fbecc7;color:#7a5200">bridge</span>` : ""}</div>`;
+    }).join("") || `<p class="muted small">No connections yet.</p>`}</div>
+    ${state.me.is_admin && !isMe ? `<button id="guess">Set who ${esc(firstName(p.name))} knows (your guess)</button>` : ""}
+  </div>`);
+  s.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { s.remove(); askKnow(id, b.dataset.k === "1"); });
+  const gb = s.querySelector("#guess"); if (gb) gb.onclick = () => { s.remove(); openGuess(id); };
+}
+
+// asks "how did you meet?" then saves
+function askKnow(otherId, knows) {
+  const other = state.byId.get(otherId);
+  if (!knows) return saveKnow(otherId, false);
+  const l = state.linkMap.get(key(otherId, state.me.id));
+  const others = state.people.filter(p => p.id !== otherId && p.id !== state.me.id);
+  const s = sheet(`<form class="stack" id="hf">
+    <h2>How did you meet ${esc(firstName(other.name))}?</h2>
+    <label class="f">Who introduced you?<select id="intro"><option value="">Nobody, we just met</option>
+      ${others.map(p => `<option value="${p.id}" ${l?.introduced_by === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
+    <label class="f">Anything else? <span class="muted small">(optional)</span><input id="how" maxlength="120" placeholder="e.g. Zeppelin Hall, college, work" value="${esc(l?.how_met || "")}"></label>
+    <div class="row"><button class="primary" type="submit" style="flex:1">Save</button><button type="button" id="skip">Skip</button></div>
+  </form>`);
+  $("#hf", s).onsubmit = e => { e.preventDefault(); s.remove(); saveKnow(otherId, true, $("#how", s).value, $("#intro", s).value || null); };
+  $("#skip", s).onclick = () => { s.remove(); saveKnow(otherId, true); };
+}
+async function saveKnow(otherId, knows, how = null, intro = null) {
+  const { error } = await sb.rpc("kilala_set_link", { p_other: otherId, p_knows: knows, p_how_met: how, p_introduced_by: intro });
+  if (error) return toast(error.message);
+  toast(knows ? "Connection saved" : "Got it");
+  await refresh();
+}
+
+// admin: guess who someone knows
+function openGuess(id) {
+  const p = state.byId.get(id);
+  const others = state.people.filter(q => q.id !== id);
+  const s = sheet(`<div class="stack"><h2>Who does ${esc(firstName(p.name))} know?</h2>
+    <p class="small muted">Your best guess. It counts on the map until they answer for themselves.</p>
+    <input id="gq" placeholder="Search">
+    <div class="list" id="gl">${others.map(q => {
+      const l = state.linkMap.get(key(id, q.id));
+      const on = q.id === state.me.id ? myAnswer(id) === true : !!(l?.admin_ok);
+      return `<label class="check" data-n="${esc(q.name.toLowerCase())}"><input type="checkbox" data-id="${q.id}" ${on ? "checked" : ""}><span class="name grow">${esc(q.name)}</span>${l?.counted ? `<span class="pill ok">on map</span>` : ""}</label>`;
+    }).join("")}</div>
+    <button class="primary" id="gdone">Done</button></div>`);
+  $("#gq", s).oninput = e => { const v = e.target.value.toLowerCase(); s.querySelectorAll("#gl .check").forEach(r => r.style.display = r.dataset.n.includes(v) ? "" : "none"); };
+  s.querySelectorAll("#gl input").forEach(cb => cb.onchange = async () => {
+    const { error } = await sb.rpc("kilala_admin_link", { p1: id, p2: cb.dataset.id, p_knows: cb.checked });
+    if (error) { cb.checked = !cb.checked; toast(error.message); }
+  });
+  $("#gdone", s).onclick = async () => { s.remove(); await refresh(); };
+}
+
+// ---------- YOU ----------
+function viewYou() {
+  const others = state.people.filter(p => p.id !== state.me.id);
+  const toCheck = others.filter(p => myAnswer(p.id) === null && state.linkMap.get(key(p.id, state.me.id))?.admin_ok);
+  const rest = others.filter(p => !toCheck.includes(p));
+  const row = p => { const a = myAnswer(p.id); return `<div class="item"><span class="dot" style="background:${colorOf(p)}"></span>
+    <div class="grow"><div class="name">${esc(p.name)}</div><div class="small muted">${esc((p.groups || []).join(", "))}</div></div>
+    <button class="small yes ${a === true ? "on" : ""}" data-id="${p.id}" data-k="1">Know</button><button class="small no ${a === false ? "on" : ""}" data-id="${p.id}" data-k="0">Don't</button></div>`; };
+  const mine = state.adj.get(state.me.id).size;
+  $("#view").innerHTML = `<div class="stack">
+    <div><h1>Hi, ${esc(firstName(state.me.name))}</h1><p class="muted">You know <b>${mine}</b> ${mine === 1 ? "person" : "people"} on the map. ${groupChips(state.me)}</p></div>
+    ${toCheck.length ? `<div class="card stack" style="background:#fff6e3;border-color:#f3dca6"><h3>Dean thinks you know these people</h3><p class="small muted">Is he right? Tap Know or Don't.</p><div class="list">${toCheck.map(row).join("")}</div></div>` : ""}
+    <div class="card stack"><h3>Who else do you know?</h3><input id="yq" placeholder="Search names"><div class="list" id="yl">${rest.map(row).join("") || `<p class="muted small">No one else on the map yet.</p>`}</div></div>
+  </div>`;
+  $("#view").querySelectorAll("[data-k]").forEach(b => b.onclick = () => askKnow(b.dataset.id, b.dataset.k === "1"));
+  const yq = $("#yq"); if (yq) yq.oninput = e => { const v = e.target.value.toLowerCase(); $("#yl").querySelectorAll(".item").forEach(r => r.style.display = r.textContent.toLowerCase().includes(v) ? "" : "none"); };
+}
+
+// ---------- RANKS ----------
+function scores(kind) {
+  const s = new Map(state.people.map(p => [p.id, 0]));
+  const c = counted();
+  if (kind === "month") {
+    const now = new Date(); const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    for (const l of c) if (l.counted_at && new Date(l.counted_at) >= start) { s.set(l.a, s.get(l.a) + 1); s.set(l.b, s.get(l.b) + 1); }
+  } else if (kind === "connector") {
+    for (const l of c) if (l.introduced_by && s.has(l.introduced_by)) s.set(l.introduced_by, s.get(l.introduced_by) + 1);
+  } else {
+    for (const p of state.people) {
+      const own = new Set(p.groups || []); const reached = new Set();
+      for (const f of state.adj.get(p.id)) for (const g of state.byId.get(f).groups || []) if (!own.has(g)) reached.add(g);
+      s.set(p.id, reached.size);
+    }
+    for (const l of c) if (l.introduced_by && s.has(l.introduced_by) && isBridge(state.byId.get(l.a), state.byId.get(l.b))) s.set(l.introduced_by, s.get(l.introduced_by) + 2);
+  }
+  return state.people.map(p => ({ p, v: s.get(p.id) })).sort((a, b) => b.v - a.v || a.p.name.localeCompare(b.p.name));
+}
+function viewRanks() {
+  const T = {
+    month: ["This month", `New connections made in ${new Date().toLocaleString("en-US", { month: "long" })}. Anyone can win.`, "new"],
+    connector: ["Top connector", "Intros you made that stuck: both people now know each other and named you as the one who introduced them.", "intros"],
+    bridge: ["Bridge builder", "1 point for each friend group you reach outside your own, plus 2 for every intro you make between people who share no group.", "pts"]
+  };
+  const list = scores(state.rankTab);
+  let rank = 0, last = null;
+  const rows = list.map((r, i) => { if (r.v !== last) { rank = i + 1; last = r.v; } return { ...r, rank }; });
+  const top = rows.filter(r => r.v > 0).slice(0, 15);
+  const meRow = rows.find(r => r.p.id === state.me.id);
+  const showMe = meRow && !top.includes(meRow);
+  const line = r => `<div class="item ${r.p.id === state.me.id ? "me-row" : ""}"><span class="rank ${r.rank === 1 && r.v ? "r1" : ""}">${r.rank}</span><span class="dot" style="background:${colorOf(r.p)}"></span><div class="grow name">${esc(r.p.id === state.me.id ? "You" : r.p.name)}</div><span class="score">${r.v}</span><span class="small muted">${T[state.rankTab][2]}</span></div>`;
+  $("#view").innerHTML = `<div class="stack"><h1>Ranks</h1>
+    <div class="seg">${Object.entries(T).map(([k, [l]]) => `<button data-t="${k}" class="${state.rankTab === k ? "on" : ""}">${l}</button>`).join("")}</div>
+    <p class="small muted">${T[state.rankTab][1]}</p>
+    <div class="card"><div class="list">${top.map(line).join("") || `<div class="empty">No points yet. Be the first.</div>`}${showMe ? `<div class="item"><span class="muted small">…</span></div>` + line(meRow) : ""}</div></div></div>`;
+  $("#view").querySelectorAll("[data-t]").forEach(b => b.onclick = () => { state.rankTab = b.dataset.t; viewRanks(); });
+}
+
+// ---------- EVENTS (Dean only) ----------
+async function viewEvents() {
+  $("#view").innerHTML = `<p class="muted">Loading…</p>`;
+  const { data, error } = await sb.from("kilala_events").select("id,name,happened_on,kilala_event_guests(person_id)").order("happened_on", { ascending: false });
+  if (error) return toast(error.message);
+  state.events = data;
+  $("#view").innerHTML = `<div class="stack"><h1>Events</h1>
+    <p class="muted">Add a hangout and who's coming. Kilala picks the intros worth making, and you tick them off on the night.</p>
+    <form class="card stack" id="ef"><h3>New event</h3>
+      <label class="f">Name<input id="en" required maxlength="80" placeholder="e.g. Zoo lights + Shillelagh"></label>
+      <label class="f">Date<input id="ed" type="date" required value="${new Date().toISOString().slice(0, 10)}"></label>
+      <button class="primary" type="submit">Create</button></form>
+    <div class="card"><div class="list">${data.map(e => `<div class="item" data-e="${e.id}" style="cursor:pointer"><div class="grow"><div class="name">${esc(e.name)}</div><div class="small muted">${new Date(e.happened_on + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ${e.kilala_event_guests.length} guests</div></div><span>→</span></div>`).join("") || `<div class="empty">No events yet.</div>`}</div></div></div>`;
+  $("#ef").onsubmit = async ev => {
+    ev.preventDefault();
+    const { data: e, error } = await sb.from("kilala_events").insert({ name: $("#en").value.trim(), happened_on: $("#ed").value }).select().single();
+    if (error) return toast(error.message);
+    openEvent(e.id);
+  };
+  $("#view").querySelectorAll("[data-e]").forEach(r => r.onclick = () => openEvent(r.dataset.e));
+}
+async function openEvent(id) {
+  const [{ data: ev, error }, { data: intros }] = await Promise.all([
+    sb.from("kilala_events").select("id,name,happened_on,kilala_event_guests(person_id)").eq("id", id).single(),
+    sb.from("kilala_event_intros").select("*").eq("event_id", id)
+  ]);
+  if (error) return toast(error.message);
+  const guests = ev.kilala_event_guests.map(g => state.byId.get(g.person_id)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+  const gIds = new Set(guests.map(g => g.id));
+  const introKeys = new Set((intros || []).map(i => key(i.a, i.b)));
+  // pairs of guests who don't know each other yet
+  const sugg = [];
+  for (let i = 0; i < guests.length; i++) for (let j = i + 1; j < guests.length; j++) {
+    const p = guests[i], q = guests[j];
+    if (state.adj.get(p.id).has(q.id) || introKeys.has(key(p.id, q.id))) continue;
+    const mutual = [...state.adj.get(p.id)].filter(x => state.adj.get(q.id).has(x)).length;
+    const bridge = isBridge(p, q);
+    const shared = (p.groups || []).filter(g => (q.groups || []).includes(g));
+    const reason = bridge ? `connects ${p.groups[0]} and ${q.groups[0]}` : shared.length ? `both ${shared[0]}` : "";
+    const why = [reason, mutual ? `${mutual} mutual friend${mutual > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ") || "haven't met yet";
+    sugg.push({ p, q, score: (bridge ? 3 : 0) + mutual + (shared.length ? 1 : 0), why });
+  }
+  sugg.sort((x, y) => y.score - x.score);
+  const pairs = guests.length * (guests.length - 1) / 2;
+  let known = 0;
+  for (let i = 0; i < guests.length; i++) for (let j = i + 1; j < guests.length; j++) if (state.adj.get(guests[i].id).has(guests[j].id)) known++;
+  const done = (intros || []).filter(i => i.done).length;
+  $("#view").innerHTML = `<div class="stack">
+    <button class="link" id="back" style="align-self:flex-start">← Events</button>
+    <div><h1>${esc(ev.name)}</h1><p class="muted">${new Date(ev.happened_on + "T12:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · ${guests.length} guests${pairs ? ` · ${Math.round(100 * Math.max(0, known) / pairs)}% already know each other` : ""}</p></div>
+    <div class="card stack"><div class="spread"><h3>Intro checklist</h3><span class="pill ${done && done === intros.length ? "ok" : ""}">${done}/${(intros || []).length} done</span></div>
+      <div class="list">${(intros || []).map(i => { const p = state.byId.get(i.a), q = state.byId.get(i.b); if (!p || !q) return ""; return `<label class="check ${i.done ? "done" : ""}"><input type="checkbox" data-a="${i.a}" data-b="${i.b}" ${i.done ? "checked" : ""}><div class="grow"><div class="name">${esc(p.name)} + ${esc(q.name)}</div>${i.reason ? `<div class="small muted">${esc(i.reason)}</div>` : ""}</div><button class="small" data-rm="${i.a}|${i.b}" type="button">✕</button></label>`; }).join("") || `<p class="small muted">Add a few from the suggestions below. 3–5 is plenty for one night.</p>`}</div>
+      <p class="small muted">Ticking one puts them on the map as met, with you as the introducer.</p></div>
+    <div class="card stack"><h3>Suggested intros</h3>
+      <div class="list">${sugg.slice(0, 12).map((s, k) => `<div class="item"><div class="grow"><div class="name">${esc(s.p.name)} + ${esc(s.q.name)}</div><div class="small muted">${esc(s.why)}</div></div><button class="small sun" data-add="${k}">Add</button></div>`).join("") || `<p class="small muted">${guests.length < 2 ? "Add guests first." : "Everyone here already knows each other. Nice."}</p>`}</div></div>
+    <div class="card stack"><div class="spread"><h3>Guests (${guests.length})</h3><button class="small" id="editg">Edit guests</button></div>
+      <div class="row" style="flex-wrap:wrap;gap:6px">${guests.map(g => `<span class="chip"><span class="dot" style="background:${colorOf(g)}"></span>${esc(g.name)}</span>`).join("") || `<span class="small muted">No guests yet.</span>`}</div></div>
+    <button class="small" id="delev" style="align-self:flex-start;color:var(--bad)">Delete event</button>
+  </div>`;
+  $("#back").onclick = () => viewEvents();
+  $("#editg").onclick = () => editGuests(ev, gIds);
+  $("#view").querySelectorAll("[data-add]").forEach(b => b.onclick = async () => {
+    const s = sugg[+b.dataset.add]; const [a, c] = s.p.id < s.q.id ? [s.p.id, s.q.id] : [s.q.id, s.p.id];
+    const { error } = await sb.from("kilala_event_intros").insert({ event_id: id, a, b: c, reason: s.why });
+    if (error) return toast(error.message); openEvent(id);
+  });
+  $("#view").querySelectorAll("[data-rm]").forEach(b => b.onclick = async e => {
+    e.preventDefault(); const [a, c] = b.dataset.rm.split("|");
+    await sb.from("kilala_event_intros").delete().match({ event_id: id, a, b: c }); openEvent(id);
+  });
+  $("#view").querySelectorAll(".check input[data-a]").forEach(cb => cb.onchange = async () => {
+    const { a, b } = cb.dataset;
+    const { error } = await sb.from("kilala_event_intros").update({ done: cb.checked }).match({ event_id: id, a, b });
+    if (error) return toast(error.message);
+    if (cb.checked) { await sb.rpc("kilala_admin_link", { p1: a, p2: b, p_knows: true, p_how_met: "Met at " + ev.name, p_introduced_by: state.me.id }); toast("Intro made 🎉"); }
+    await loadAll(); openEvent(id);
+  });
+  const del = $("#delev"); del.onclick = async () => {
+    if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "Tap again to delete"; return; }
+    await sb.from("kilala_events").delete().eq("id", id); viewEvents();
+  };
+}
+function editGuests(ev, gIds) {
+  const s = sheet(`<div class="stack"><h2>Who's coming?</h2><input id="gq" placeholder="Search">
+    <div class="list" id="gl">${state.people.map(p => `<label class="check" data-n="${esc(p.name.toLowerCase())}"><input type="checkbox" value="${p.id}" ${gIds.has(p.id) ? "checked" : ""}><span class="name grow">${esc(p.name)}</span></label>`).join("")}</div>
+    <button class="primary" id="gs">Save guests</button></div>`);
+  $("#gq", s).oninput = e => { const v = e.target.value.toLowerCase(); s.querySelectorAll("#gl .check").forEach(r => r.style.display = r.dataset.n.includes(v) ? "" : "none"); };
+  $("#gs", s).onclick = async () => {
+    const want = new Set([...s.querySelectorAll("#gl input:checked")].map(i => i.value));
+    const add = [...want].filter(x => !gIds.has(x)).map(person_id => ({ event_id: ev.id, person_id }));
+    const rm = [...gIds].filter(x => !want.has(x));
+    if (add.length) { const { error } = await sb.from("kilala_event_guests").insert(add); if (error) return toast(error.message); }
+    if (rm.length) await sb.from("kilala_event_guests").delete().eq("event_id", ev.id).in("person_id", rm);
+    s.remove(); openEvent(ev.id);
+  };
+}
+
+// ---------- PEOPLE (Dean only) ----------
+function viewPeople() {
+  const ppl = [...state.people].sort((a, b) => (a.is_admin ? -1 : 0) - (b.is_admin ? -1 : 0) || a.name.localeCompare(b.name));
+  const joined = ppl.filter(p => p.user_id).length;
+  $("#view").innerHTML = `<div class="stack"><h1>People</h1>
+    <p class="muted">${ppl.length} on the map · ${joined} joined. Send each friend their own invite link.</p>
+    <form class="card stack" id="af"><h3>Add friends</h3>
+      <label class="f">Names, one per line<textarea id="names" placeholder="Mark\nJess Santos\nPaolo"></textarea></label>
+      <label class="f">Group for all of them <span class="muted small">(optional)</span><input id="ng" list="glist" placeholder="e.g. Work, College, Hiking"></label>
+      <datalist id="glist">${[...state.groupColor.keys()].map(g => `<option value="${esc(g)}">`).join("")}</datalist>
+      <button class="primary" type="submit">Add to map</button></form>
+    <div class="card"><div class="list">${ppl.map(p => `<div class="item" style="flex-wrap:wrap">
+      <span class="dot" style="background:${colorOf(p)}"></span>
+      <div class="grow"><div class="name">${esc(p.name)}${p.is_admin ? " (you)" : ""}</div>
+        <input class="small" data-g="${p.id}" value="${esc((p.groups || []).join(", "))}" placeholder="Groups, comma separated" list="glist" style="margin-top:6px;padding:7px 10px;font-size:13px"></div>
+      <div class="stack" style="gap:6px;align-items:flex-end">
+        ${p.user_id ? `<span class="pill ok">Joined</span>` : `<button class="small sun" data-inv="${p.id}">Send invite</button>`}
+        ${!p.is_admin ? `<button class="small" data-who="${p.id}">Who they know</button>` : ""}
+        ${!p.is_admin ? `<button class="link small" data-del="${p.id}" style="color:var(--bad)">Remove</button>` : ""}
+      </div></div>`).join("")}</div></div></div>`;
+  $("#af").onsubmit = async e => {
+    e.preventDefault();
+    const names = $("#names").value.split("\n").map(s => s.trim()).filter(Boolean);
+    const grp = $("#ng").value.trim();
+    if (!names.length) return;
+    const existing = new Set(state.people.map(p => p.name.toLowerCase()));
+    const rows = names.filter(n => !existing.has(n.toLowerCase())).map(name => ({ name: name.slice(0, 60), groups: grp ? [grp] : [] }));
+    if (!rows.length) return toast("They're already on the map");
+    const { error } = await sb.from("kilala_people").insert(rows);
+    if (error) return toast(error.message);
+    toast(`Added ${rows.length}`); await refresh();
+  };
+  $("#view").querySelectorAll("[data-g]").forEach(inp => inp.onchange = async () => {
+    const groups = [...new Set(inp.value.split(",").map(s => s.trim()).filter(Boolean))].map(g => g.slice(0, 30));
+    const { error } = await sb.from("kilala_people").update({ groups }).eq("id", inp.dataset.g);
+    if (error) return toast(error.message); toast("Groups saved"); await refresh();
+  });
+  $("#view").querySelectorAll("[data-who]").forEach(b => b.onclick = () => openGuess(b.dataset.who));
+  $("#view").querySelectorAll("[data-inv]").forEach(b => b.onclick = () => shareInvite(b.dataset.inv));
+  $("#view").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Tap again to remove"; return; }
+    const { error } = await sb.from("kilala_people").delete().eq("id", b.dataset.del);
+    if (error) return toast(error.message); await refresh();
+  });
+}
+async function shareInvite(id) {
+  const p = state.byId.get(id);
+  const { data: token, error } = await sb.rpc("kilala_invite_token", { p_person: id });
+  if (error || !token) return toast(error?.message || "No invite for them");
+  const url = SITE_URL + "?invite=" + token;
+  const text = `Hey ${firstName(p.name)}! I'm mapping who knows who in our friend group so I can make better intros. This is your personal link. Tap it, sign in, and you're on the map:`;
+  const s = sheet(`<div class="stack"><h2>Invite ${esc(firstName(p.name))}</h2>
+    <p class="small muted">This link is just for ${esc(firstName(p.name))}. It puts them on their own dot when they sign in.</p>
+    <textarea id="msg" style="min-height:110px">${esc(text + "\n" + url)}</textarea>
+    <div class="row">${navigator.share ? `<button class="primary" id="sh" style="flex:1">Share…</button>` : ""}<button id="cp" style="flex:1">Copy</button></div>
+    <button class="link small" id="nw" style="align-self:flex-start">Make a new link (the old one stops working)</button></div>`);
+  if (navigator.share) $("#sh", s).onclick = () => navigator.share({ text: $("#msg", s).value }).catch(() => {});
+  $("#cp", s).onclick = async () => { try { await navigator.clipboard.writeText($("#msg", s).value); toast("Copied"); } catch { $("#msg", s).select(); toast("Select and copy the text"); } };
+  $("#nw", s).onclick = async () => { const { error } = await sb.rpc("kilala_new_invite", { p_person: id }); if (error) return toast(error.message); s.remove(); shareInvite(id); };
+}
+</script>
+</body>
+</html>
