@@ -534,6 +534,9 @@ function viewPeople() {
       <label class="f">Group for all of them <span class="muted small">(optional)</span><input id="ng" list="glist" placeholder="e.g. Work, College, Hiking"></label>
       <datalist id="glist">${[...state.groupColor.keys()].map(g => `<option value="${esc(g)}">`).join("")}</datalist>
       <button class="primary" type="submit">Add to map</button></form>
+    <div class="card stack"><h3>Groups</h3>
+      <p class="small muted">To add a group, type it in anyone's group box below. Rename or remove a group here and it changes for everyone.</p>
+      <div class="list">${[...state.groupColor.entries()].map(([g, col]) => { const n = state.people.filter(p => (p.groups || []).includes(g)).length; return `<div class="item"><span class="dot" style="background:${col}"></span><input data-grp="${esc(g)}" value="${esc(g)}" maxlength="30" aria-label="Group name" style="flex:1;padding:7px 10px"><span class="small muted">${n}</span><button class="link small" data-grpdel="${esc(g)}" style="color:var(--bad)">Remove</button></div>`; }).join("") || `<p class="small muted">No groups yet.</p>`}</div></div>
     <div class="card"><div class="list">${ppl.map(p => `<div class="item" style="flex-wrap:wrap">
       <span class="dot" style="background:${colorOf(p)}"></span>
       <div class="grow"><input class="name" data-name="${p.id}" value="${esc(p.name)}" maxlength="60" aria-label="Name" style="font-weight:600;padding:6px 10px">
@@ -565,6 +568,24 @@ function viewPeople() {
     if (!name) { inp.value = state.byId.get(inp.dataset.name).name; return toast("Name can't be empty"); }
     const { error } = await sb.from("kilala_people").update({ name }).eq("id", inp.dataset.name);
     if (error) return toast(error.message); toast("Name saved"); await refresh();
+  });
+  async function regroup(from, to) {
+    const hit = state.people.filter(p => (p.groups || []).includes(from));
+    for (const p of hit) {
+      const groups = [...new Set(p.groups.map(g => g === from ? to : g).filter(Boolean))];
+      const { error } = await sb.from("kilala_people").update({ groups }).eq("id", p.id);
+      if (error) return toast(error.message);
+    }
+    toast(to ? `Renamed to ${to}` : `Removed ${from}`); await refresh();
+  }
+  $("#view").querySelectorAll("[data-grp]").forEach(inp => inp.onchange = () => {
+    const to = inp.value.trim().slice(0, 30);
+    if (!to) { inp.value = inp.dataset.grp; return toast("Use Remove to delete a group"); }
+    if (to !== inp.dataset.grp) regroup(inp.dataset.grp, to);
+  });
+  $("#view").querySelectorAll("[data-grpdel]").forEach(b => b.onclick = () => {
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Tap again"; return; }
+    regroup(b.dataset.grpdel, null);
   });
   $("#view").querySelectorAll("[data-who]").forEach(b => b.onclick = () => openGuess(b.dataset.who));
   $("#view").querySelectorAll("[data-inv]").forEach(b => b.onclick = () => shareInvite(b.dataset.inv));
