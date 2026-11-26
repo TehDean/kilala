@@ -144,6 +144,13 @@ function derive() {
 }
 const counted = () => state.links.filter(l => l.counted && state.byId.has(l.a) && state.byId.has(l.b));
 const colorOf = p => (p.groups && p.groups.length) ? state.groupColor.get(p.groups[0]) : NOGROUP;
+const colorsOf = p => (p.groups && p.groups.length) ? p.groups.map(g => state.groupColor.get(g)) : [NOGROUP];
+// CSS background for a small dot: one solid color, or pie slices for several groups
+function dotBg(p) {
+  const c = colorsOf(p); if (c.length === 1) return c[0];
+  const step = 360 / c.length;
+  return `conic-gradient(${c.map((col, i) => `${col} ${i * step}deg ${(i + 1) * step}deg`).join(",")})`;
+}
 const sharesGroup = (p, q) => (p.groups || []).some(g => (q.groups || []).includes(g));
 const isBridge = (p, q) => p.groups?.length && q.groups?.length && !sharesGroup(p, q);
 function myAnswer(otherId) {
@@ -273,9 +280,16 @@ function drawGraph() {
   const link = g.append("g").selectAll("line").data(links).join("line")
     .attr("stroke", d => d.bridge ? "#c98a00" : "#cfc4b3").attr("stroke-width", d => d.bridge ? 2 : 1.3).attr("stroke-opacity", .9);
   const node = g.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer");
-  node.append("circle").attr("r", d => 7 + Math.sqrt(d.deg) * 2.6).attr("fill", d => colorOf(d.p))
-    .attr("stroke", d => d.id === state.me.id ? "#1f1b16" : "#fff").attr("stroke-width", d => d.id === state.me.id ? 3 : 1.5)
-    .attr("opacity", d => d.p.user_id ? 1 : .75);
+  const R = d => 7 + Math.sqrt(d.deg) * 2.6;
+  node.each(function (d) {
+    const el = d3.select(this).append("g").attr("opacity", d.p.user_id ? 1 : .75);
+    const cols = colorsOf(d.p);
+    if (cols.length === 1) el.append("circle").attr("r", R(d)).attr("fill", cols[0]);
+    else el.selectAll("path").data(d3.pie().value(1).sort(null)(cols)).join("path")
+      .attr("d", d3.arc().innerRadius(0).outerRadius(R(d))).attr("fill", a => a.data);
+  });
+  node.append("circle").attr("r", R).attr("fill", "none")
+    .attr("stroke", d => d.id === state.me.id ? "#1f1b16" : "#fff").attr("stroke-width", d => d.id === state.me.id ? 3 : 1.5);
   node.append("text").text(d => d.id === state.me.id ? "You" : firstName(d.p.name)).attr("x", d => 10 + Math.sqrt(d.deg) * 2.6).attr("y", 4);
   node.on("click", (ev, d) => { ev.stopPropagation(); openPerson(d.id); });
   const sim = d3.forceSimulation(nodes)
@@ -332,7 +346,7 @@ function openPerson(id) {
     <h3>Knows ${friends.length} ${friends.length === 1 ? "person" : "people"}</h3>
     <div class="list">${friends.map(f => {
       const l = state.linkMap.get(key(id, f.id)); const intro = l?.introduced_by && state.byId.get(l.introduced_by);
-      return `<div class="item"><span class="dot" style="background:${colorOf(f)}"></span><div class="grow"><div class="name">${esc(f.name)}</div>
+      return `<div class="item"><span class="dot" style="background:${dotBg(f)}"></span><div class="grow"><div class="name">${esc(f.name)}</div>
         ${(l?.how_met || intro) ? `<div class="small muted">${intro ? "Introduced by " + esc(firstName(intro.name)) : ""}${intro && l.how_met ? " · " : ""}${esc(l.how_met || "")}</div>` : ""}</div>
         ${isBridge(p, f) ? `<span class="pill" style="background:#fbecc7;color:#7a5200">bridge</span>` : ""}</div>`;
     }).join("") || `<p class="muted small">No connections yet.</p>`}</div>
@@ -391,7 +405,7 @@ function viewYou() {
   const others = state.people.filter(p => p.id !== state.me.id);
   const toCheck = state.me.is_admin ? [] : others.filter(p => myAnswer(p.id) === null && state.linkMap.get(key(p.id, state.me.id))?.admin_ok);
   const rest = others.filter(p => !toCheck.includes(p));
-  const row = p => { const a = myAnswer(p.id); return `<div class="item"><span class="dot" style="background:${colorOf(p)}"></span>
+  const row = p => { const a = myAnswer(p.id); return `<div class="item"><span class="dot" style="background:${dotBg(p)}"></span>
     <div class="grow"><div class="name">${esc(p.name)}</div><div class="small muted">${esc((p.groups || []).join(", "))}</div></div>
     <button class="small yes ${a === true ? "on" : ""}" data-id="${p.id}" data-k="1">Know</button><button class="small no ${a === false ? "on" : ""}" data-id="${p.id}" data-k="0">Don't</button></div>`; };
   const mine = state.adj.get(state.me.id).size;
@@ -435,7 +449,7 @@ function viewRanks() {
   const top = rows.filter(r => r.v > 0).slice(0, 15);
   const meRow = rows.find(r => r.p.id === state.me.id);
   const showMe = meRow && !top.includes(meRow);
-  const line = r => `<div class="item ${r.p.id === state.me.id ? "me-row" : ""}"><span class="rank ${r.rank === 1 && r.v ? "r1" : ""}">${r.rank}</span><span class="dot" style="background:${colorOf(r.p)}"></span><div class="grow name">${esc(r.p.id === state.me.id ? "You" : r.p.name)}</div><span class="score">${r.v}</span><span class="small muted">${T[state.rankTab][2]}</span></div>`;
+  const line = r => `<div class="item ${r.p.id === state.me.id ? "me-row" : ""}"><span class="rank ${r.rank === 1 && r.v ? "r1" : ""}">${r.rank}</span><span class="dot" style="background:${dotBg(r.p)}"></span><div class="grow name">${esc(r.p.id === state.me.id ? "You" : r.p.name)}</div><span class="score">${r.v}</span><span class="small muted">${T[state.rankTab][2]}</span></div>`;
   $("#view").innerHTML = `<div class="stack"><h1>Ranks</h1>
     <div class="seg">${Object.entries(T).map(([k, [l]]) => `<button data-t="${k}" class="${state.rankTab === k ? "on" : ""}">${l}</button>`).join("")}</div>
     <p class="small muted">${T[state.rankTab][1]}</p>
@@ -499,7 +513,7 @@ async function openEvent(id) {
     <div class="card stack"><h3>Suggested intros</h3>
       <div class="list">${sugg.slice(0, 12).map((s, k) => `<div class="item"><div class="grow"><div class="name">${esc(s.p.name)} + ${esc(s.q.name)}</div><div class="small muted">${esc(s.why)}</div></div><button class="small sun" data-add="${k}">Add</button></div>`).join("") || `<p class="small muted">${guests.length < 2 ? "Add guests first." : "Everyone here already knows each other. Nice."}</p>`}</div></div>
     <div class="card stack"><div class="spread"><h3>Guests (${guests.length})</h3><button class="small" id="editg">Edit guests</button></div>
-      <div class="row" style="flex-wrap:wrap;gap:6px">${guests.map(g => `<span class="chip"><span class="dot" style="background:${colorOf(g)}"></span>${esc(g.name)}</span>`).join("") || `<span class="small muted">No guests yet.</span>`}</div></div>
+      <div class="row" style="flex-wrap:wrap;gap:6px">${guests.map(g => `<span class="chip"><span class="dot" style="background:${dotBg(g)}"></span>${esc(g.name)}</span>`).join("") || `<span class="small muted">No guests yet.</span>`}</div></div>
     <button class="small" id="delev" style="align-self:flex-start;color:var(--bad)">Delete event</button>
   </div>`;
   $("#back").onclick = () => viewEvents();
@@ -556,7 +570,7 @@ function viewPeople() {
       <form class="row" id="newgrp"><input id="newgrpname" maxlength="30" placeholder="New group, e.g. Gym" style="flex:1"><button class="small sun" type="submit">Add</button></form>
       <div class="list">${[...state.groupColor.entries()].map(([g, col]) => { const n = state.people.filter(p => (p.groups || []).includes(g)).length; return `<div class="item"><span class="dot" style="background:${col}"></span><input data-grp="${esc(g)}" value="${esc(g)}" maxlength="30" aria-label="Group name" style="flex:1;padding:7px 10px"><button class="small" data-grpppl="${esc(g)}">People (${n})</button><button class="link small" data-grpdel="${esc(g)}" style="color:var(--bad)">Remove</button></div>`; }).join("") || `<p class="small muted">No groups yet.</p>`}</div></div>
     <div class="card"><div class="list">${ppl.map(p => `<div class="item" style="flex-wrap:wrap">
-      <span class="dot" style="background:${colorOf(p)}"></span>
+      <span class="dot" style="background:${dotBg(p)}"></span>
       <div class="grow"><input class="name" data-name="${p.id}" value="${esc(p.name)}" maxlength="60" aria-label="Name" style="font-weight:600;padding:6px 10px">
         <input class="small" data-g="${p.id}" value="${esc((p.groups || []).join(", "))}" placeholder="Groups, comma separated" list="glist" style="margin-top:6px;padding:7px 10px;font-size:13px"></div>
       <div class="stack" style="gap:6px;align-items:flex-end">
