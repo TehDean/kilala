@@ -180,6 +180,7 @@ async function boot() {
 }
 window.addEventListener("hashchange", () => {
   const t = location.hash.replace("#", "");
+  closeAllSheets();
   if (state.me && ["map", "you", "ranks", "events", "people"].includes(t)) { state.tab = t; render(); }
 });
 
@@ -294,13 +295,29 @@ function drawGraph() {
 }
 
 // ---------- person sheet ----------
+// pop-ups get their own "back" step, so the phone's back button closes them
+let skipPop = 0;
+const openSheets = () => document.querySelectorAll(".sheet-bg");
+function closeAllSheets() { openSheets().forEach(b => b.rawRemove ? b.rawRemove() : Element.prototype.remove.call(b)); }
 function sheet(html) {
   const bg = document.createElement("div"); bg.className = "sheet-bg";
   bg.innerHTML = `<div class="sheet">${html}</div>`;
+  bg.rawRemove = () => Element.prototype.remove.call(bg);
+  bg.remove = () => {
+    if (!bg.isConnected) return;
+    bg.rawRemove();
+    // if nothing replaced it right away, undo the extra history step
+    setTimeout(() => { if (!openSheets().length && history.state && history.state.kilalaSheet) { skipPop++; history.back(); } }, 0);
+  };
   bg.onclick = e => { if (e.target === bg) bg.remove(); };
+  if (!(history.state && history.state.kilalaSheet)) history.pushState({ kilalaSheet: 1 }, "");
   document.body.appendChild(bg);
   return bg;
 }
+window.addEventListener("popstate", () => {
+  if (skipPop) { skipPop--; return; }
+  closeAllSheets();
+});
 function groupChips(p) { return (p.groups || []).map(g => `<span class="chip"><span class="dot" style="background:${state.groupColor.get(g)}"></span>${esc(g)}</span>`).join(" "); }
 function openPerson(id) {
   const p = state.byId.get(id); if (!p) return;
