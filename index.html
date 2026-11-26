@@ -372,7 +372,7 @@ function openGuess(id) {
 // ---------- YOU ----------
 function viewYou() {
   const others = state.people.filter(p => p.id !== state.me.id);
-  const toCheck = others.filter(p => myAnswer(p.id) === null && state.linkMap.get(key(p.id, state.me.id))?.admin_ok);
+  const toCheck = state.me.is_admin ? [] : others.filter(p => myAnswer(p.id) === null && state.linkMap.get(key(p.id, state.me.id))?.admin_ok);
   const rest = others.filter(p => !toCheck.includes(p));
   const row = p => { const a = myAnswer(p.id); return `<div class="item"><span class="dot" style="background:${colorOf(p)}"></span>
     <div class="grow"><div class="name">${esc(p.name)}</div><div class="small muted">${esc((p.groups || []).join(", "))}</div></div>
