@@ -528,7 +528,7 @@ function viewPeople() {
   const ppl = [...state.people].sort((a, b) => (a.is_admin ? -1 : 0) - (b.is_admin ? -1 : 0) || a.name.localeCompare(b.name));
   const joined = ppl.filter(p => p.user_id).length;
   $("#view").innerHTML = `<div class="stack"><h1>People</h1>
-    <p class="muted">${ppl.length} on the map · ${joined} joined. Send each friend their own invite link.</p>
+    <p class="muted">${ppl.length} on the map · ${joined} joined. Tap a name or group to edit it. Send each friend their own invite link.</p>
     <form class="card stack" id="af"><h3>Add friends</h3>
       <label class="f">Names, one per line<textarea id="names" placeholder="Mark\nJess Santos\nPaolo"></textarea></label>
       <label class="f">Group for all of them <span class="muted small">(optional)</span><input id="ng" list="glist" placeholder="e.g. Work, College, Hiking"></label>
@@ -536,7 +536,7 @@ function viewPeople() {
       <button class="primary" type="submit">Add to map</button></form>
     <div class="card"><div class="list">${ppl.map(p => `<div class="item" style="flex-wrap:wrap">
       <span class="dot" style="background:${colorOf(p)}"></span>
-      <div class="grow"><div class="name">${esc(p.name)}${p.is_admin ? " (you)" : ""}</div>
+      <div class="grow"><input class="name" data-name="${p.id}" value="${esc(p.name)}" maxlength="60" aria-label="Name" style="font-weight:600;padding:6px 10px">
         <input class="small" data-g="${p.id}" value="${esc((p.groups || []).join(", "))}" placeholder="Groups, comma separated" list="glist" style="margin-top:6px;padding:7px 10px;font-size:13px"></div>
       <div class="stack" style="gap:6px;align-items:flex-end">
         ${p.user_id ? `<span class="pill ok">Joined</span>` : `<button class="small sun" data-inv="${p.id}">Send invite</button>`}
@@ -559,6 +559,12 @@ function viewPeople() {
     const groups = [...new Set(inp.value.split(",").map(s => s.trim()).filter(Boolean))].map(g => g.slice(0, 30));
     const { error } = await sb.from("kilala_people").update({ groups }).eq("id", inp.dataset.g);
     if (error) return toast(error.message); toast("Groups saved"); await refresh();
+  });
+  $("#view").querySelectorAll("[data-name]").forEach(inp => inp.onchange = async () => {
+    const name = inp.value.trim().slice(0, 60);
+    if (!name) { inp.value = state.byId.get(inp.dataset.name).name; return toast("Name can't be empty"); }
+    const { error } = await sb.from("kilala_people").update({ name }).eq("id", inp.dataset.name);
+    if (error) return toast(error.message); toast("Name saved"); await refresh();
   });
   $("#view").querySelectorAll("[data-who]").forEach(b => b.onclick = () => openGuess(b.dataset.who));
   $("#view").querySelectorAll("[data-inv]").forEach(b => b.onclick = () => shareInvite(b.dataset.inv));
