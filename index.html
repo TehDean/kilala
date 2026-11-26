@@ -268,7 +268,7 @@ function viewMap() {
     ${n >= 2 ? `<div class="seg"><button data-mode="known" class="${state.mapMode === "known" ? "on" : ""}">Who knows who</button><button data-mode="gaps" class="${state.mapMode === "gaps" ? "on" : ""}">Who hasn't met (${possible - c})</button></div>` : ""}
     ${n < 2 ? `<div class="card empty">${state.me.is_admin ? `Add your friends on the <a href="#people">People</a> tab to start the map.` : "The map is just getting started."}</div>` : `<svg id="graph"></svg>`}
     ${groups.length ? `<div class="legend">${groups.map(([g, col]) => `<span class="chip"><span class="dot" style="background:${col}"></span>${esc(g)}</span>`).join("")}<span class="chip"><span class="dot" style="background:${NOGROUP}"></span>no group yet</span></div>` : ""}
-    <p class="small muted">${state.mapMode === "gaps" ? "Each red line is two people who haven't met yet. Tap anyone to see who they still need to meet." : "Tap anyone to see who they know. Pinch or drag to move around."}</p>
+    <p class="small muted">${state.mapMode === "gaps" ? "Each red line is two people who haven't met yet. People who've met everyone sit off to the side. Tap anyone to see who they still need to meet." : "Tap anyone to see who they know. Pinch or drag to move around."}</p>
   </div>`;
   $("#view").querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { state.mapMode = b.dataset.mode; viewMap(); });
   if (n >= 2) drawGraph();
@@ -289,8 +289,8 @@ function drawGraph() {
     if (!state.adj.get(nodes[i].id).has(nodes[j].id)) missing.push({ source: nodes[i], target: nodes[j] });
   const gline = g.append("g").selectAll("line").data(missing).join("line")
     .attr("stroke", "#d0553b").attr("stroke-width", 1.2).attr("stroke-opacity", .55).attr("stroke-dasharray", "3 3");
-  const link = g.append("g").selectAll("line").data(links).join("line")
-    .attr("stroke", d => d.bridge ? "#c98a00" : "#cfc4b3").attr("stroke-width", d => d.bridge ? 2 : 1.3).attr("stroke-opacity", gaps ? .25 : .9);
+  const link = g.append("g").selectAll("line").data(gaps ? [] : links).join("line")
+    .attr("stroke", d => d.bridge ? "#c98a00" : "#cfc4b3").attr("stroke-width", d => d.bridge ? 2 : 1.3).attr("stroke-opacity", .9);
   const node = g.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer");
   const R = d => 7 + Math.sqrt(d.deg) * 2.6;
   node.each(function (d) {
@@ -305,17 +305,19 @@ function drawGraph() {
   node.append("text").text(d => d.id === state.me.id ? "You" : firstName(d.p.name)).attr("x", d => 10 + Math.sqrt(d.deg) * 2.6).attr("y", 4);
   node.on("click", (ev, d) => { ev.stopPropagation(); openPerson(d.id); });
   const sim = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(d => d.id).distance(70).strength(.5))
+    .force("link", d3.forceLink(gaps ? missing : links).id(d => d.id).distance(70).strength(gaps ? .35 : .5))
     .force("wish", d3.forceLink(wishLinks).id(d => d.id).strength(0))
     .force("charge", d3.forceManyBody().strength(-170))
     .force("center", d3.forceCenter(W / 2, H / 2))
-    .force("x", d3.forceX(W / 2).strength(.06)).force("y", d3.forceY(H / 2).strength(.08))
+    .force("x", d3.forceX(W / 2).strength(d => gaps && !missing.some(m => m.source === d || m.target === d) ? .01 : .06))
+    .force("y", d3.forceY(H / 2).strength(d => gaps && !missing.some(m => m.source === d || m.target === d) ? .01 : .08))
     .force("collide", d3.forceCollide(d => 16 + Math.sqrt(d.deg) * 2.6));
   node.call(d3.drag()
     .on("start", (ev, d) => { if (!ev.active) sim.alphaTarget(.3).restart(); d.fx = d.x; d.fy = d.y; })
     .on("drag", (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
     .on("end", (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
   sim.on("tick", () => {
+    for (const d of nodes) { d.x = Math.max(24, Math.min(W - 70, d.x)); d.y = Math.max(24, Math.min(H - 24, d.y)); }
     gline.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
     wline.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
     link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
