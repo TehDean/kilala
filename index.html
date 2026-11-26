@@ -130,6 +130,8 @@ async function loadAll() {
   ]);
   if (p.error) throw p.error; if (l.error) throw l.error;
   state.people = p.data; state.links = l.data;
+  const w = await sb.from("kilala_wishes").select("*");
+  state.wishes = w.error ? [] : w.data;
   derive();
 }
 function derive() {
@@ -241,7 +243,7 @@ const ICONS = {
 };
 function render() {
   const tabs = [["map", "Map"], ["you", "You"], ["ranks", "Ranks"]];
-  if (state.me.is_admin) tabs.push(["events", "Events"], ["people", "People"]);
+  if (state.me.is_admin) tabs.push(["events", "Intros"], ["people", "People"]);
   app.innerHTML = `<header class="top"><div class="brand">${LOGO} Kilala</div><button class="small" id="signout">Sign out</button></header>
     <main id="view"></main>
     <nav class="tabs">${tabs.map(([k, l]) => `<a href="#${k}" class="${state.tab === k ? "on" : ""}">${ICONS[k]}${l}</a>`).join("")}</nav>`;
@@ -277,6 +279,8 @@ function drawGraph() {
   const links = counted().map(l => ({ source: l.a, target: l.b, bridge: isBridge(state.byId.get(l.a), state.byId.get(l.b)) }));
   const g = svg.append("g");
   svg.call(d3.zoom().scaleExtent([.3, 4]).on("zoom", ev => g.attr("transform", ev.transform)));
+  const wishLinks = state.me.is_admin ? state.wishes.filter(w => state.byId.has(w.a) && state.byId.has(w.b) && !state.adj.get(w.a).has(w.b)).map(w => ({ source: w.a, target: w.b })) : [];
+  const wline = g.append("g").selectAll("line").data(wishLinks).join("line").attr("stroke", "#c98a00").attr("stroke-width", 1.5).attr("stroke-dasharray", "4 4").attr("opacity", .8);
   const link = g.append("g").selectAll("line").data(links).join("line")
     .attr("stroke", d => d.bridge ? "#c98a00" : "#cfc4b3").attr("stroke-width", d => d.bridge ? 2 : 1.3).attr("stroke-opacity", .9);
   const node = g.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer");
@@ -294,6 +298,7 @@ function drawGraph() {
   node.on("click", (ev, d) => { ev.stopPropagation(); openPerson(d.id); });
   const sim = d3.forceSimulation(nodes)
     .force("link", d3.forceLink(links).id(d => d.id).distance(70).strength(.5))
+    .force("wish", d3.forceLink(wishLinks).id(d => d.id).strength(0))
     .force("charge", d3.forceManyBody().strength(-170))
     .force("center", d3.forceCenter(W / 2, H / 2))
     .force("x", d3.forceX(W / 2).strength(.06)).force("y", d3.forceY(H / 2).strength(.08))
@@ -303,6 +308,7 @@ function drawGraph() {
     .on("drag", (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
     .on("end", (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
   sim.on("tick", () => {
+    wline.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
     link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
     node.attr("transform", d => `translate(${d.x},${d.y})`);
   });
@@ -457,13 +463,43 @@ function viewRanks() {
   $("#view").querySelectorAll("[data-t]").forEach(b => b.onclick = () => { state.rankTab = b.dataset.t; viewRanks(); });
 }
 
-// ---------- EVENTS (Dean only) ----------
+// ---------- INTROS + EVENTS (Dean only) ----------
+const wished = (a, b) => state.wishes.some(w => w.a === (a < b ? a : b) && w.b === (a < b ? b : a));
+function introIdeas(pool, limit) {
+  const out = [];
+  for (let i = 0; i < pool.length; i++) for (let j = i + 1; j < pool.length; j++) {
+    const p = pool[i], q = pool[j];
+    if (state.adj.get(p.id).has(q.id)) continue;
+    const mutual = [...state.adj.get(p.id)].filter(x => state.adj.get(q.id).has(x)).length;
+    const bridge = isBridge(p, q);
+    const shared = (p.groups || []).filter(g => (q.groups || []).includes(g));
+    const onList = wished(p.id, q.id);
+    const reason = bridge ? `connects ${p.groups[0]} and ${q.groups[0]}` : shared.length ? `both ${shared[0]}` : "";
+    const why = [onList ? "on your list" : "", reason, mutual ? `${mutual} mutual friend${mutual > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ") || "haven't met yet";
+    out.push({ p, q, onList, score: (onList ? 10 : 0) + (bridge ? 3 : 0) + mutual + (shared.length ? 1 : 0), why });
+  }
+  return out.sort((x, y) => y.score - x.score).slice(0, limit);
+}
 async function viewEvents() {
   $("#view").innerHTML = `<p class="muted">Loading…</p>`;
   const { data, error } = await sb.from("kilala_events").select("id,name,happened_on,kilala_event_guests(person_id)").order("happened_on", { ascending: false });
   if (error) return toast(error.message);
   state.events = data;
-  $("#view").innerHTML = `<div class="stack"><h1>Events</h1>
+  const ppl = [...state.people].sort((a, b) => a.name.localeCompare(b.name));
+  const opts = ppl.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  const wishes = state.wishes.map(w => ({ ...w, p: state.byId.get(w.a), q: state.byId.get(w.b) })).filter(w => w.p && w.q)
+    .map(w => ({ ...w, met: state.adj.get(w.a).has(w.b) })).sort((x, y) => x.met - y.met);
+  const ideas = introIdeas(state.people, 30).filter(x => !x.onList).slice(0, 5);
+  $("#view").innerHTML = `<div class="stack"><h1>Intros</h1>
+    <div class="card stack"><div class="spread"><h3>Intros to make</h3><span class="pill">${wishes.filter(w => !w.met).length} to go</span></div>
+      <p class="small muted">People who should meet. They're flagged first when both are at an event, and show as dashed lines on your map.</p>
+      <div class="list">${wishes.map(w => `<div class="item"><div class="grow"><div class="name" ${w.met ? 'style="text-decoration:line-through;color:var(--muted)"' : ""}>${esc(w.p.name)} + ${esc(w.q.name)}</div>${w.reason ? `<div class="small muted">${esc(w.reason)}</div>` : ""}</div>
+        ${w.met ? `<span class="pill ok">Met</span>` : `<button class="small sun" data-made="${w.a}|${w.b}">Made it</button>`}<button class="small" data-unwish="${w.a}|${w.b}" title="Remove">✕</button></div>`).join("") || `<p class="small muted">Nothing on the list yet.</p>`}</div>
+      <form class="stack" id="wf" style="gap:8px"><div class="row"><select id="wa" required><option value="">Person</option>${opts}</select><span>+</span><select id="wb" required><option value="">Person</option>${opts}</select></div>
+        <div class="row"><input id="wr" maxlength="120" placeholder="Why? (optional) e.g. both into climbing" style="flex:1"><button class="small primary" type="submit">Add</button></div></form>
+      ${ideas.length ? `<hr><h3 style="font-size:14px">Ideas</h3><div class="list">${ideas.map((x, k) => `<div class="item"><div class="grow"><div class="name">${esc(x.p.name)} + ${esc(x.q.name)}</div><div class="small muted">${esc(x.why)}</div></div><button class="small" data-idea="${k}">+ List</button></div>`).join("")}</div>` : ""}
+    </div>
+    <h2 style="margin-top:6px">Events</h2>
     <p class="muted">Add a hangout and who's coming. Kilala picks the intros worth making, and you tick them off on the night.</p>
     <form class="card stack" id="ef"><h3>New event</h3>
       <label class="f">Name<input id="en" required maxlength="80" placeholder="e.g. Zoo lights + Shillelagh"></label>
@@ -477,6 +513,26 @@ async function viewEvents() {
     openEvent(e.id);
   };
   $("#view").querySelectorAll("[data-e]").forEach(r => r.onclick = () => openEvent(r.dataset.e));
+  const addWish = async (x, y, reason) => {
+    if (!x || !y || x === y) return toast("Pick two different people");
+    if (state.adj.get(x).has(y)) return toast("They already know each other");
+    const [a, b] = x < y ? [x, y] : [y, x];
+    const { error } = await sb.from("kilala_wishes").upsert({ a, b, reason: reason || null });
+    if (error) return toast(error.message);
+    toast("Added to your list"); await loadAll(); viewEvents();
+  };
+  $("#wf").onsubmit = e => { e.preventDefault(); addWish($("#wa").value, $("#wb").value, $("#wr").value.trim()); };
+  $("#view").querySelectorAll("[data-idea]").forEach(b => b.onclick = () => { const x = ideas[+b.dataset.idea]; addWish(x.p.id, x.q.id, x.why); });
+  $("#view").querySelectorAll("[data-made]").forEach(b => b.onclick = async () => {
+    const [a, c] = b.dataset.made.split("|"); const w = state.wishes.find(w => w.a === a && w.b === c);
+    const { error } = await sb.rpc("kilala_admin_link", { p1: a, p2: c, p_knows: true, p_how_met: w?.reason || null, p_introduced_by: state.me.id });
+    if (error) return toast(error.message);
+    toast("Intro made 🎉"); await loadAll(); viewEvents();
+  });
+  $("#view").querySelectorAll("[data-unwish]").forEach(b => b.onclick = async () => {
+    const [a, c] = b.dataset.unwish.split("|");
+    await sb.from("kilala_wishes").delete().match({ a, b: c }); await loadAll(); viewEvents();
+  });
 }
 async function openEvent(id) {
   const [{ data: ev, error }, { data: intros }] = await Promise.all([
@@ -487,19 +543,8 @@ async function openEvent(id) {
   const guests = ev.kilala_event_guests.map(g => state.byId.get(g.person_id)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
   const gIds = new Set(guests.map(g => g.id));
   const introKeys = new Set((intros || []).map(i => key(i.a, i.b)));
-  // pairs of guests who don't know each other yet
-  const sugg = [];
-  for (let i = 0; i < guests.length; i++) for (let j = i + 1; j < guests.length; j++) {
-    const p = guests[i], q = guests[j];
-    if (state.adj.get(p.id).has(q.id) || introKeys.has(key(p.id, q.id))) continue;
-    const mutual = [...state.adj.get(p.id)].filter(x => state.adj.get(q.id).has(x)).length;
-    const bridge = isBridge(p, q);
-    const shared = (p.groups || []).filter(g => (q.groups || []).includes(g));
-    const reason = bridge ? `connects ${p.groups[0]} and ${q.groups[0]}` : shared.length ? `both ${shared[0]}` : "";
-    const why = [reason, mutual ? `${mutual} mutual friend${mutual > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ") || "haven't met yet";
-    sugg.push({ p, q, score: (bridge ? 3 : 0) + mutual + (shared.length ? 1 : 0), why });
-  }
-  sugg.sort((x, y) => y.score - x.score);
+  // pairs of guests who don't know each other yet (wish-list pairs first)
+  const sugg = introIdeas(guests, 1000).filter(x => !introKeys.has(key(x.p.id, x.q.id)));
   const pairs = guests.length * (guests.length - 1) / 2;
   let known = 0;
   for (let i = 0; i < guests.length; i++) for (let j = i + 1; j < guests.length; j++) if (state.adj.get(guests[i].id).has(guests[j].id)) known++;

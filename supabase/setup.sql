@@ -231,3 +231,18 @@ grant execute on function public.kilala_claim(text), public.kilala_set_link(uuid
 
 -- Dean is the first person and the admin. He claims this row with his own invite link.
 insert into public.kilala_people (name, is_admin) values ('Dean', true);
+
+-- ---------- intro wish list (Dean only) ----------
+create table public.kilala_wishes (
+  a uuid not null references public.kilala_people(id) on delete cascade,
+  b uuid not null references public.kilala_people(id) on delete cascade,
+  reason text check (reason is null or length(reason) <= 120),
+  created_at timestamptz not null default now(),
+  primary key (a, b),
+  check (a < b)
+);
+create index on public.kilala_wishes (b);
+alter table public.kilala_wishes enable row level security;
+create policy kilala_wishes_admin on public.kilala_wishes for all to authenticated
+  using ((select public.kilala_is_admin())) with check ((select public.kilala_is_admin()));
+revoke all on public.kilala_wishes from anon;
