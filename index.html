@@ -335,7 +335,7 @@ function askKnow(otherId, knows) {
     <h2>How did you meet ${esc(firstName(other.name))}?</h2>
     <label class="f">Who introduced you?<select id="intro"><option value="">Nobody, we just met</option>
       ${others.map(p => `<option value="${p.id}" ${l?.introduced_by === p.id ? "selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
-    <label class="f">Anything else? <span class="muted small">(optional)</span><input id="how" maxlength="120" placeholder="e.g. Zeppelin Hall, college, work" value="${esc(l?.how_met || "")}"></label>
+    <label class="f">Where or how? <span class="muted small">(optional, shows on the map)</span><input id="how" maxlength="120" placeholder="e.g. climbing, college, work" value="${esc(l?.how_met || "")}"></label>
     <div class="row"><button class="primary" type="submit" style="flex:1">Save</button><button type="button" id="skip">Skip</button></div>
   </form>`);
   $("#hf", s).onsubmit = e => { e.preventDefault(); s.remove(); saveKnow(otherId, true, $("#how", s).value, $("#intro", s).value || null); };
